@@ -12,6 +12,6 @@ Three data files:
 3. Barbenheimer_Reddit_Replies.csv: Posts, comments, and replies to comments in thread.
 
 The content is:
-Total Posts: 159 
-Total Comments:  51288 
-Total Replies:  98877
+- Total Posts: 159 
+- Total Comments:  51288 
+- Total Replies:  98877
