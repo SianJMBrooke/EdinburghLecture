@@ -1,0 +1,123 @@
+---
+title: "BrookeSJ_Barbenheimer_Lecture_Week03"
+author: "Siân Brooke"
+date: "2024-01-15"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) 
+
+# Remember to install packages if you haven't used them before.
+# install.packages("tidytext")
+
+library(dplyr)
+library(tidytext)
+library(readtext)
+library(tm)
+library(ggplot2)
+library(reshape)
+library(sentimentr)
+
+```
+
+## Data Reading In
+Load in the Reddit / Barbenheimer Data
+
+
+The pipe operator, written as %>% , is a longstanding feature of the magrittr package for R. 
+It takes the output of one function and passes it into another function as an argument. 
+This allows us to link a sequence of analysis steps.
+
+```{r}
+barbenheimer_posts <- read.csv("~/PycharmProjects/Edi_Lecture/Data/Barbenheimer_Reddit_Posts.csv")
+barbie_posts <- read.csv("~/PycharmProjects/Edi_Lecture/Data/Barbie_Reddit_Posts.csv")
+oppi_posts <- read.csv("~/PycharmProjects/Edi_Lecture/Data/Oppenheimer_Reddit_Posts.csv")
+
+data_list <- list(barbenheimer_posts, barbie_posts, oppi_posts)
+barbenheimer_data <- merge_recurse(data_list)
+
+ barbenheimer_data <- barbenheimer_data[!(is.na(barbenheimer_data$Post.Text) | barbenheimer_data$Post.Text==""), ]
+ 
+str(barbenheimer_data)
+
+```
+
+## Text Pre-Processing 
+
+You can convert a text column to lowercase using the tolower() function. This function is vectorized, meaning it can be applied to each element of a vector (or a column in a data frame) without the need for explicit looping. 
+
+In this code snippet:
+
+- tolower(df$text_column) converts each entry in text_column to lowercase.
+- df$text_column <- ... replaces the original text_column in your data frame with these lowercase versions.
+
+```{r}
+# Convert the text column to lowercase
+barbenheimer_data$Post.Title <- tolower(barbenheimer_data$Post.Title)
+barbenheimer_data$Post.Text <- tolower(barbenheimer_data$Post.Text)
+```
+
+In the code below, we create a corpus from the text column, tokenize the corpus using word_tokenizer, and then convert the tokenized corpus back to a data frame for easy viewing. This will tokenize the text in the specified column into individual words.
+
+The resulting tokenized_data data frame will have two columns: "text_column" (containing the original text) and "word" (containing individual word tokens).
+
+Note that you'll need to have the dplyr package loaded as well since unnest_tokens() is part of the tidyverse.
+
+
+```{r}
+
+tidy_barbenheimer <- barbenheimer_data %>% 
+  # Tokenize the text column using unnest_tokens()
+  unnest_tokens(word, Post.Text, strip_punct = TRUE)
+
+
+
+tidy_barbenheimer_words <- tidy_barbenheimer %>% 
+  # Remove the stop words
+  anti_join(stop_words)
+  
+tidy_barbenheimer_words <- tidy_barbenheimer_words[!tidy_barbenheimer_words$word %in% as.character(c(0:100)),]
+
+```
+count the words
+
+```{r}
+word_count <- head(tidy_barbenheimer_words %>% count(word, sort=TRUE), 10)
+
+library(ggplot2)
+# Basic barplot
+p <- ggplot(data=head(tidy_barbenheimer_words %>% count(word, sort=TRUE), 10), 
+            aes(x=word, y=n)) +
+  geom_bar(stat="identity") + 
+  labs(x = "Word", y = "Frequency in Dataset") +
+  theme_minimal()
+p
+
+```
+
+Plot sentiment of entire post over time
+
+```{r}
+# converting to datetime object 
+barbenheimer_data$Post.Sentiment <- sapply(barbenheimer_data$Post.Text, function(x) 
+                             mean(sentiment(x)$sentiment))
+
+barbenheimer_data$Post.Date <- as.Date(barbenheimer_data$Post.Date)
+```
+Plot
+```{r}
+
+p <- ggplot(aes(x = Post.Date, y = Post.Sentiment), 
+            data = barbenheimer_data) + 
+  geom_point() + 
+  labs(x = "Date of Reddit Post", y = "Sentiment of Post")
+
+p + stat_smooth(method = "loess", formula = y ~ x, size = 1)
+
+
+
+```
+
+
+
